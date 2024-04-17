@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>GDP_PPP</title>
+<title>GDP PPP</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -19,6 +19,40 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -50,7 +84,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">GDP_PPP</h1>
+<h1 class="title">GDP PPP</h1>
 </div>
 
 
@@ -65,59 +99,53 @@ ul.task-list li input[type="checkbox"] {
 
 </header>
 
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>gdp_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204.csv"</span>, <span class="at">sep =</span> <span class="st">","</span>, <span class="at">header =</span> <span class="cn">TRUE</span>, <span class="at">skip =</span> <span class="dv">4</span>, <span class="at">check.names =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
 <pre class="shinylive-r" data-engine="r"><code>#| standalone: true
 #| viewerHeight: 600
 library(shiny)
 library(bslib)
+library(tidyverse)
 
-# Define UI for app that draws a histogram ----
-ui &lt;- page_sidebar(
-  sidebar = sidebar(open = "open",
-    numericInput("n", "Sample count", 100),
-    checkboxInput("pause", "Pause", FALSE),
-  ),
-  plotOutput("plot", width=1100)
+# Define UI for application
+ui &lt;- fluidPage(
+  titlePanel("GDP PPP"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("country", "Country:",
+                  choices = unique(gdp_data$Country.Name),
+                  selected = "Sweden"),
+      selectInput("s_year", "Start Year:",
+                  choices = colnames(gdp_data)[5:ncol(gdp_data)],
+                  selected = 2000),
+      selectInput("e_year", "End Year:",
+                  choices = colnames(gdp_data)[5:ncol(gdp_data)],
+                  selected = 2020)
+                  
+    ),
+    mainPanel(
+      plotOutput("gdp_plot")
+    )
+  )
 )
 
-server &lt;- function(input, output, session) {
-  data &lt;- reactive({
-    input$resample
-    if (!isTRUE(input$pause)) {
-      invalidateLater(1000)
-    }
-    rnorm(input$n)
+# Define server logic
+server &lt;- function(input, output) {
+  output$gdp_plot &lt;- renderPlot({
+    gdp_data %&gt;%
+      filter(Country.Name == input$country) %&gt;%
+      select(input$s_year:input$e_year) %&gt;%
+      pivot_longer(cols = everything(), names_to = "Year", values_to = "GDP") %&gt;%
+      ggplot(aes(x = Year, y = GDP)) +
+      geom_line() +
+      labs(title = paste("GDP PPP for", input$country),
+           x = "Year",
+           y = "GDP PPP")
   })
-  
-  output$plot &lt;- renderPlot({
-    hist(data(),
-      breaks = 40,
-      xlim = c(-2, 2),
-      ylim = c(0, 1),
-      lty = "blank",
-      xlab = "value",
-      freq = FALSE,
-      main = ""
-    )
-    
-    x &lt;- seq(from = -2, to = 2, length.out = 500)
-    y &lt;- dnorm(x)
-    lines(x, y, lwd=1.5)
-    
-    lwd &lt;- 5
-    abline(v=0, col="red", lwd=lwd, lty=2)
-    abline(v=mean(data()), col="blue", lwd=lwd, lty=1)
-
-    legend(legend = c("Normal", "Mean", "Sample mean"),
-      col = c("black", "red", "blue"),
-      lty = c(1, 2, 1),
-      lwd = c(1, lwd, lwd),
-      x = 1,
-      y = 0.9
-    )
-  }, res=140)
 }
 
-# Create Shiny app ----
+# Run the application
 shinyApp(ui = ui, server = server)</code></pre>
 
 </main>
