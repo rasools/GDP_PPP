@@ -20,40 +20,6 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-/* CSS for syntax highlighting */
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-}
 </style>
 
 
@@ -99,47 +65,56 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </header>
 
-<div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>gdp_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204.csv"</span>, <span class="at">sep =</span> <span class="st">","</span>, <span class="at">header =</span> <span class="cn">TRUE</span>, <span class="at">skip =</span> <span class="dv">4</span>, <span class="at">check.names =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
 <pre class="shinylive-r" data-engine="r"><code>#| standalone: true
 #| viewerHeight: 600
 library(shiny)
 library(bslib)
 library(tidyverse)
+library(ggplot2)
 
-# Define UI for application
+# Load and preprocess the data
+data &lt;- read.csv("data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204.csv", sep = ";", header = TRUE, skip = 4) %&gt;%
+  rename_with(~ gsub("X", "", .x)) %&gt;%
+  select(-c(3:5)) %&gt;%
+  pivot_longer(cols = -c(1:2), names_to = "Year", values_to = "Value") %&gt;%
+  mutate(Year = as.numeric(Year))
+
+# Define the UI
 ui &lt;- fluidPage(
-  titlePanel("GDP PPP"),
+  titlePanel("Country GDP PPP Data"),
   sidebarLayout(
     sidebarPanel(
-      selectInput("country", "Country:",
-                  choices = unique(gdp_data$Country.Name),
-                  selected = "Sweden"),
-      selectInput("s_year", "Start Year:",
-                  choices = colnames(gdp_data)[5:ncol(gdp_data)],
-                  selected = 2000),
-      selectInput("e_year", "End Year:",
-                  choices = colnames(gdp_data)[5:ncol(gdp_data)],
-                  selected = 2020)
-                  
+      selectizeInput("country", "Select Countries", choices = NULL, multiple = TRUE),
+      sliderInput("years", "Select Years Range", min = min(data$Year), max = max(data$Year), value = c(min(data$Year), max(data$Year)))
     ),
     mainPanel(
-      plotOutput("gdp_plot")
+      plotOutput("plot", width=1100)
     )
   )
 )
 
-# Define server logic
-server &lt;- function(input, output) {
-  output$gdp_plot &lt;- renderPlot({
-    gdp_data %&gt;%
-      filter(Country.Name == input$country) %&gt;%
-      select(input$s_year:input$e_year) %&gt;%
-      pivot_longer(cols = everything(), names_to = "Year", values_to = "GDP") %&gt;%
-      ggplot(aes(x = Year, y = GDP)) +
+
+# Define the server logic
+server &lt;- function(input, output, session) {
+  # Update the country choices
+  observe({
+    updateSelectizeInput(session, "country", choices = unique(data$Country.Name))
+  })
+  
+  # Filter the data
+  filtered_data &lt;- reactive({
+    req(input$country, input$years)
+    data %&gt;%
+      filter(`Country.Name` %in% input$country,
+             Year &gt;= input$years[1],
+             Year &lt;= input$years[2])
+  })
+  
+  # Create the plot
+  output$plot &lt;- renderPlot({
+    ggplot(filtered_data(), aes(x = Year, y = Value, color = `Country.Name`)) +
       geom_line() +
-      labs(title = paste("GDP PPP for", input$country),
+      labs(title = "GDP PPP Over Time",
            x = "Year",
            y = "GDP PPP")
   })

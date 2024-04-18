@@ -4,50 +4,57 @@ filters:
   - shinylive
 ---
 
-```{r}
-gdp_data <- read.csv("data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204.csv", sep = ",", header = TRUE, skip = 4, check.names = T)
-```
-
-
 ```{shinylive-r}
 #| standalone: true
 #| viewerHeight: 600
 library(shiny)
 library(bslib)
 library(tidyverse)
+library(ggplot2)
 
-# Define UI for application
+# Load and preprocess the data
+data <- read.csv("data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204.csv", sep = ";", header = TRUE, skip = 4) %>%
+  rename_with(~ gsub("X", "", .x)) %>%
+  select(-c(3:5)) %>%
+  pivot_longer(cols = -c(1:2), names_to = "Year", values_to = "Value") %>%
+  mutate(Year = as.numeric(Year))
+
+# Define the UI
 ui <- fluidPage(
-  titlePanel("GDP PPP"),
+  titlePanel("Country GDP PPP Data"),
   sidebarLayout(
     sidebarPanel(
-      selectInput("country", "Country:",
-                  choices = unique(gdp_data$Country.Name),
-                  selected = "Sweden"),
-      selectInput("s_year", "Start Year:",
-                  choices = colnames(gdp_data)[5:ncol(gdp_data)],
-                  selected = 2000),
-      selectInput("e_year", "End Year:",
-                  choices = colnames(gdp_data)[5:ncol(gdp_data)],
-                  selected = 2020)
-                  
+      selectizeInput("country", "Select Countries", choices = NULL, multiple = TRUE),
+      sliderInput("years", "Select Years Range", min = min(data$Year), max = max(data$Year), value = c(min(data$Year), max(data$Year)))
     ),
     mainPanel(
-      plotOutput("gdp_plot")
+      plotOutput("plot", width=1100)
     )
   )
 )
 
-# Define server logic
-server <- function(input, output) {
-  output$gdp_plot <- renderPlot({
-    gdp_data %>%
-      filter(Country.Name == input$country) %>%
-      select(input$s_year:input$e_year) %>%
-      pivot_longer(cols = everything(), names_to = "Year", values_to = "GDP") %>%
-      ggplot(aes(x = Year, y = GDP)) +
+
+# Define the server logic
+server <- function(input, output, session) {
+  # Update the country choices
+  observe({
+    updateSelectizeInput(session, "country", choices = unique(data$Country.Name))
+  })
+  
+  # Filter the data
+  filtered_data <- reactive({
+    req(input$country, input$years)
+    data %>%
+      filter(`Country.Name` %in% input$country,
+             Year >= input$years[1],
+             Year <= input$years[2])
+  })
+  
+  # Create the plot
+  output$plot <- renderPlot({
+    ggplot(filtered_data(), aes(x = Year, y = Value, color = `Country.Name`)) +
       geom_line() +
-      labs(title = paste("GDP PPP for", input$country),
+      labs(title = "GDP PPP Over Time",
            x = "Year",
            y = "GDP PPP")
   })
