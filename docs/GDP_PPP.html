@@ -79,18 +79,15 @@ data &lt;- read.csv("data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCA
   pivot_longer(cols = -c(1:2), names_to = "Year", values_to = "Value") %&gt;%
   mutate(Year = as.numeric(Year))
 
-# Define the UI
-ui &lt;- fluidPage(
-  titlePanel("Country GDP PPP Data"),
-  sidebarLayout(
-    sidebarPanel(
-      selectizeInput("country", "Select Countries", choices = NULL, multiple = TRUE),
-      sliderInput("years", "Select Years Range", min = min(data$Year), max = max(data$Year), value = c(min(data$Year), max(data$Year)))
-    ),
-    mainPanel(
-      plotOutput("plot", width=1100)
-    )
-  )
+# Define UI for app that draws a histogram ----
+ui &lt;- page_sidebar(
+  sidebar = sidebar(open = "open",
+  # make check boxes for countries
+    selectizeInput("country", "Select Countries", choices = NULL, multiple = TRUE),
+  # make a slider input for years
+    sliderInput("year", "Select Year", min = 2000, max = 2020, value = c(2000, 2020)),
+  ),
+  plotOutput("plot", width=1100)
 )
 
 
