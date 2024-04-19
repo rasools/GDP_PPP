@@ -1,0 +1,70 @@
+---
+title: "test"
+format: html
+editor: visual
+---
+
+```{r}
+
+load_data <- function() {
+  url <- "https://raw.githubusercontent.com/rasools/GDP_PPP/main/data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204.csv"
+  read.csv(url, sep = ";", header = TRUE, skip = 4) %>%
+    rename_with(~ gsub("X", "", .x)) %>%
+    select(-c(3:44, 68)) %>%
+    drop_na() %>%
+    pivot_longer(cols = -c(1:2), names_to = "Year", values_to = "Value") %>%
+    mutate(Year = as.numeric(Year)) %>%
+    mutate(Value = ceiling(Value))
+}
+
+ # Load data
+  data <- load_data()
+  
+  
+  # Read the jeojson file for the world map
+  world <-
+    read_sf("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
+
+  
+  # Filter the data
+  filtered_data_world <- 
+    data %>%
+      filter(Year == 2022)
+    
+  # Merge the world data with the filtered data
+  hm_df <-
+    left_join(world, filtered_data_world, by = c("id" = "Country.Code"))
+
+```
+
+```{r}
+ggplot(hm_df, aes(fill = Value)) +
+  geom_sf() +
+  scale_fill_viridis_c() +
+  labs(title = paste("GDP PPP in", 2020),
+       x = "Longitude",
+       y = "Latitude") +
+  theme_minimal()
+  
+```
+
+```{r}
+world <-
+  json_data <- jsonlite::fromJSON("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
+  sf::st_as_sf(json_data, crs = 4326)
+
+```
+
+```{r}
+# Assuming your data frame is called "world"
+# Write the data frame to a TSV file
+write.table(world, "data/world_geo_data.tsv", sep = "\t", row.names = FALSE)
+
+
+```
+
+```{r}
+url2 <- "https://raw.githubusercontent.com/rasools/GDP_PPP/main/data/world_geo_data.tsv"
+world <- read.table(url2, sep = "\t", header = TRUE)
+
+```

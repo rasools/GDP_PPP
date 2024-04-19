@@ -60,7 +60,7 @@ library(plotly)
 library(sf)
 
 
-# Load data
+# function for loading data
 load_data &lt;- function() {
   url &lt;- "https://raw.githubusercontent.com/rasools/GDP_PPP/main/data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204.csv"
   read.csv(url, sep = ";", header = TRUE, skip = 4) %&gt;%
@@ -115,6 +115,7 @@ server &lt;- function(input, output) {
   
     
   # Read the jeojson file for the world map
+  
   world &lt;- reactive({
     read_sf("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
   })
@@ -135,7 +136,7 @@ server &lt;- function(input, output) {
   output$world_heatmap &lt;- renderPlot({
     ggplot(hm_df(), aes(fill = Value)) +
       geom_sf() +
-      #scale_fill_viridis_c() +
+      scale_fill_viridis_c() +
       labs(title = paste("GDP PPP in", input$year[2]),
            x = "Longitude",
            y = "Latitude") +

@@ -15,7 +15,7 @@ library(plotly)
 library(sf)
 
 
-# Load data
+# function for loading data
 load_data <- function() {
   url <- "https://raw.githubusercontent.com/rasools/GDP_PPP/main/data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204.csv"
   read.csv(url, sep = ";", header = TRUE, skip = 4) %>%
@@ -70,11 +70,10 @@ server <- function(input, output) {
   
     
   # Read the jeojson file for the world map
-#  world <- reactive({
-#    read_sf("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
-#  })
-  url2 <- "https://raw.githubusercontent.com/rasools/GDP_PPP/main/data/world_geo_data.csv"
-  world <- read.csv(url2, sep = ",", header = TRUE)
+  
+  world <- reactive({
+    read_sf("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
+  })
   
   # Filter the data
   filtered_data_world <- reactive({
