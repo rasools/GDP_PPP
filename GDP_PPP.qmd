@@ -70,9 +70,11 @@ server <- function(input, output) {
   
     
   # Read the jeojson file for the world map
-  world <- reactive({
-    read_sf("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
-  })
+#  world <- reactive({
+#    read_sf("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
+#  })
+  url2 <- "https://raw.githubusercontent.com/rasools/GDP_PPP/main/data/world_geo_data.csv"
+  world <- read.csv(url2, sep = ",", header = TRUE)
   
   # Filter the data
   filtered_data_world <- reactive({
