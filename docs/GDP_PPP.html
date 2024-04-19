@@ -56,6 +56,9 @@ library(shiny)
 library(bslib)
 library(tidyverse)
 library(ggplot2)
+library(plotly)
+library(sf)
+
 
 # Load data
 load_data &lt;- function() {
@@ -77,11 +80,13 @@ ui &lt;- page_sidebar(
   title = "GDP PPP!",
   # Sidebar panel for inputs ----
   sidebar = sidebar(
-    #sliderInput("year", "Years", min = 2000, max = 2022, value = c(2000, 2022), step = 1),
     sliderInput("year", "Years", min = min(data$Year), max = max(data$Year), value = c(min(data$Year), max(data$Year)), step=1),
     selectInput("country", "Select Countries", choices = unique(data$Country.Name), selected = "Sweden", multiple = TRUE)
   ),
-  plotOutput("plot")
+  
+  plotOutput("world_heatmap"),
+  plotOutput("line_plot")
+
 )
 
 server &lt;- function(input, output) {
@@ -90,7 +95,7 @@ server &lt;- function(input, output) {
   data &lt;- reactive(load_data())
   
   # Filter the data
-  filtered_data &lt;- reactive({
+  filtered_data_lineplot &lt;- reactive({
     req(input$country, input$year)
     data() %&gt;%
       filter(`Country.Name` %in% input$country,
@@ -98,18 +103,46 @@ server &lt;- function(input, output) {
              Year &lt;= input$year[2])
   })
   
-  # Create the plot
-  output$plot &lt;- renderPlot({
-    ggplot(filtered_data(), aes(x = as.numeric(Year), y = Value, color = `Country.Name`)) +
-      geom_line(na.rm = TRUE) + # Add na.rm = TRUE to remove NA values
+  # Create the line plot
+  output$line_plot &lt;- renderPlot({
+    ggplot(filtered_data_lineplot(), aes(x = Year, y = Value, color = `Country.Name`)) +
+      geom_line(na.rm = TRUE) +
       labs(title = "GDP PPP Over Time",
            x = "Year",
            y = "GDP PPP") +
       theme_minimal()
   })
   
+    
+  # Read the jeojson file for the world map
+  world &lt;- reactive({
+    read_sf("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
+  })
+  
+  # Filter the data
+  filtered_data_world &lt;- reactive({
+    req(input$year)
+    data() %&gt;%
+      filter(Year == input$year[2])
+  })
+    
+  # Merge the world data with the filtered data
+  hm_df &lt;- reactive({
+    left_join(world(), filtered_data_world(), by = c("id" = "Country.Code"))
+  })
+  
+  # Create the world heatmap
+  output$world_heatmap &lt;- renderPlot({
+    ggplot(hm_df(), aes(fill = Value)) +
+      geom_sf() +
+      #scale_fill_viridis_c() +
+      labs(title = paste("GDP PPP in", input$year[2]),
+           x = "Longitude",
+           y = "Latitude") +
+      theme_minimal()
+  })
+  
 }
-
 # Run the application
 shinyApp(ui = ui, server = server)
 </code></pre>

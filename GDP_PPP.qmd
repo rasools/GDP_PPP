@@ -11,6 +11,9 @@ library(shiny)
 library(bslib)
 library(tidyverse)
 library(ggplot2)
+library(plotly)
+library(sf)
+
 
 # Load data
 load_data <- function() {
@@ -35,7 +38,10 @@ ui <- page_sidebar(
     sliderInput("year", "Years", min = min(data$Year), max = max(data$Year), value = c(min(data$Year), max(data$Year)), step=1),
     selectInput("country", "Select Countries", choices = unique(data$Country.Name), selected = "Sweden", multiple = TRUE)
   ),
-  plotOutput("plot")
+  
+  plotOutput("world_heatmap"),
+  plotOutput("line_plot")
+
 )
 
 server <- function(input, output) {
@@ -44,7 +50,7 @@ server <- function(input, output) {
   data <- reactive(load_data())
   
   # Filter the data
-  filtered_data <- reactive({
+  filtered_data_lineplot <- reactive({
     req(input$country, input$year)
     data() %>%
       filter(`Country.Name` %in% input$country,
@@ -52,18 +58,46 @@ server <- function(input, output) {
              Year <= input$year[2])
   })
   
-  # Create the plot
-  output$plot <- renderPlot({
-    ggplot(filtered_data(), aes(x = as.numeric(Year), y = Value, color = `Country.Name`)) +
-      geom_line(na.rm = TRUE) + # Add na.rm = TRUE to remove NA values
+  # Create the line plot
+  output$line_plot <- renderPlot({
+    ggplot(filtered_data_lineplot(), aes(x = Year, y = Value, color = `Country.Name`)) +
+      geom_line(na.rm = TRUE) +
       labs(title = "GDP PPP Over Time",
            x = "Year",
            y = "GDP PPP") +
       theme_minimal()
   })
   
+    
+  # Read the jeojson file for the world map
+  world <- reactive({
+    read_sf("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
+  })
+  
+  # Filter the data
+  filtered_data_world <- reactive({
+    req(input$year)
+    data() %>%
+      filter(Year == input$year[2])
+  })
+    
+  # Merge the world data with the filtered data
+  hm_df <- reactive({
+    left_join(world(), filtered_data_world(), by = c("id" = "Country.Code"))
+  })
+  
+  # Create the world heatmap
+  output$world_heatmap <- renderPlot({
+    ggplot(hm_df(), aes(fill = Value)) +
+      geom_sf() +
+      scale_fill_viridis_c() +
+      labs(title = paste("GDP PPP in", input$year[2]),
+           x = "Longitude",
+           y = "Latitude") +
+      theme_minimal()
+  })
+  
 }
-
 # Run the application
 shinyApp(ui = ui, server = server)
 
