@@ -1,5 +1,5 @@
 ---
-title: "GDP PPP"
+title: ""
 filters:
   - shinylive
 ---
@@ -12,51 +12,59 @@ library(bslib)
 library(tidyverse)
 library(ggplot2)
 
-# Load and preprocess the data
-data <- read.csv("data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204.csv", sep = ";", header = TRUE, skip = 4) %>%
-  rename_with(~ gsub("X", "", .x)) %>%
-  select(-c(3:5)) %>%
-  pivot_longer(cols = -c(1:2), names_to = "Year", values_to = "Value") %>%
-  mutate(Year = as.numeric(Year))
+# Load data
+load_data <- function() {
+  url <- "https://raw.githubusercontent.com/rasools/GDP_PPP/main/data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204.csv"
+  read.csv(url, sep = ";", header = TRUE, skip = 4) %>%
+    rename_with(~ gsub("X", "", .x)) %>%
+    select(-c(3:44, 68)) %>%
+    drop_na() %>%
+    pivot_longer(cols = -c(1:2), names_to = "Year", values_to = "Value") %>%
+    mutate(Year = as.numeric(Year)) %>%
+    mutate(Value = ceiling(Value))
+}
+
+data <- load_data()
 
 # Define UI for app that draws a histogram ----
 ui <- page_sidebar(
-  sidebar = sidebar(open = "open",
-  # make check boxes for countries
-    selectizeInput("country", "Select Countries", choices = NULL, multiple = TRUE),
-  # make a slider input for years
-    sliderInput("year", "Select Year", min = 2000, max = 2020, value = c(2000, 2020)),
+  # App title ----
+  title = "GDP PPP!",
+  # Sidebar panel for inputs ----
+  sidebar = sidebar(
+    sliderInput("year", "Years", min = min(data$Year), max = max(data$Year), value = c(min(data$Year), max(data$Year)), step=1),
+    selectInput("country", "Select Countries", choices = unique(data$Country.Name), selected = "Sweden", multiple = TRUE)
   ),
-  plotOutput("plot", width=1100)
+  plotOutput("plot")
 )
 
-
-# Define the server logic
-server <- function(input, output, session) {
-  # Update the country choices
-  observe({
-    updateSelectizeInput(session, "country", choices = unique(data$Country.Name))
-  })
+server <- function(input, output) {
+  
+  # Load data
+  data <- reactive(load_data())
   
   # Filter the data
   filtered_data <- reactive({
-    req(input$country, input$years)
-    data %>%
+    req(input$country, input$year)
+    data() %>%
       filter(`Country.Name` %in% input$country,
-             Year >= input$years[1],
-             Year <= input$years[2])
+             Year >= input$year[1],
+             Year <= input$year[2])
   })
   
   # Create the plot
   output$plot <- renderPlot({
-    ggplot(filtered_data(), aes(x = Year, y = Value, color = `Country.Name`)) +
-      geom_line() +
+    ggplot(filtered_data(), aes(x = as.numeric(Year), y = Value, color = `Country.Name`)) +
+      geom_line(na.rm = TRUE) + # Add na.rm = TRUE to remove NA values
       labs(title = "GDP PPP Over Time",
            x = "Year",
-           y = "GDP PPP")
+           y = "GDP PPP") +
+      theme_minimal()
   })
+  
 }
 
 # Run the application
 shinyApp(ui = ui, server = server)
+
 ```

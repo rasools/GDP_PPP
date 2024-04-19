@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>GDP PPP</title>
+<title>gdp_ppp</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -48,22 +48,7 @@ ul.task-list li input[type="checkbox"] {
 
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default">
-<div class="quarto-title">
-<h1 class="title">GDP PPP</h1>
-</div>
 
-
-
-<div class="quarto-title-meta">
-
-    
-  
-    
-  </div>
-  
-
-</header>
 
 <pre class="shinylive-r" data-engine="r"><code>#| standalone: true
 #| viewerHeight: 600
@@ -72,53 +57,62 @@ library(bslib)
 library(tidyverse)
 library(ggplot2)
 
-# Load and preprocess the data
-data &lt;- read.csv("data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204.csv", sep = ";", header = TRUE, skip = 4) %&gt;%
-  rename_with(~ gsub("X", "", .x)) %&gt;%
-  select(-c(3:5)) %&gt;%
-  pivot_longer(cols = -c(1:2), names_to = "Year", values_to = "Value") %&gt;%
-  mutate(Year = as.numeric(Year))
+# Load data
+load_data &lt;- function() {
+  url &lt;- "https://raw.githubusercontent.com/rasools/GDP_PPP/main/data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204.csv"
+  read.csv(url, sep = ";", header = TRUE, skip = 4) %&gt;%
+    rename_with(~ gsub("X", "", .x)) %&gt;%
+    select(-c(3:44, 68)) %&gt;%
+    drop_na() %&gt;%
+    pivot_longer(cols = -c(1:2), names_to = "Year", values_to = "Value") %&gt;%
+    mutate(Year = as.numeric(Year)) %&gt;%
+    mutate(Value = ceiling(Value))
+}
+
+data &lt;- load_data()
 
 # Define UI for app that draws a histogram ----
 ui &lt;- page_sidebar(
-  sidebar = sidebar(open = "open",
-  # make check boxes for countries
-    selectizeInput("country", "Select Countries", choices = NULL, multiple = TRUE),
-  # make a slider input for years
-    sliderInput("year", "Select Year", min = 2000, max = 2020, value = c(2000, 2020)),
+  # App title ----
+  title = "GDP PPP!",
+  # Sidebar panel for inputs ----
+  sidebar = sidebar(
+    #sliderInput("year", "Years", min = 2000, max = 2022, value = c(2000, 2022), step = 1),
+    sliderInput("year", "Years", min = min(data$Year), max = max(data$Year), value = c(min(data$Year), max(data$Year)), step=1),
+    selectInput("country", "Select Countries", choices = unique(data$Country.Name), selected = "Sweden", multiple = TRUE)
   ),
-  plotOutput("plot", width=1100)
+  plotOutput("plot")
 )
 
-
-# Define the server logic
-server &lt;- function(input, output, session) {
-  # Update the country choices
-  observe({
-    updateSelectizeInput(session, "country", choices = unique(data$Country.Name))
-  })
+server &lt;- function(input, output) {
+  
+  # Load data
+  data &lt;- reactive(load_data())
   
   # Filter the data
   filtered_data &lt;- reactive({
-    req(input$country, input$years)
-    data %&gt;%
+    req(input$country, input$year)
+    data() %&gt;%
       filter(`Country.Name` %in% input$country,
-             Year &gt;= input$years[1],
-             Year &lt;= input$years[2])
+             Year &gt;= input$year[1],
+             Year &lt;= input$year[2])
   })
   
   # Create the plot
   output$plot &lt;- renderPlot({
-    ggplot(filtered_data(), aes(x = Year, y = Value, color = `Country.Name`)) +
-      geom_line() +
+    ggplot(filtered_data(), aes(x = as.numeric(Year), y = Value, color = `Country.Name`)) +
+      geom_line(na.rm = TRUE) + # Add na.rm = TRUE to remove NA values
       labs(title = "GDP PPP Over Time",
            x = "Year",
-           y = "GDP PPP")
+           y = "GDP PPP") +
+      theme_minimal()
   })
+  
 }
 
 # Run the application
-shinyApp(ui = ui, server = server)</code></pre>
+shinyApp(ui = ui, server = server)
+</code></pre>
 
 </main>
 <!-- /main column -->

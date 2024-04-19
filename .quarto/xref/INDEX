@@ -4,5 +4,11 @@
   },
   "test.qmd": {
     "test.html": "aef4f030"
+  },
+  "test2.qmd": {
+    "test2.html": "9b9e2706"
+  },
+  "test3.qmd": {
+    "test3.html": "45d7e229"
   }
 }
