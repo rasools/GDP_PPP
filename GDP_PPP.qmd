@@ -14,7 +14,6 @@ library(ggplot2)
 library(plotly)
 library(sf)
 
-
 # function for loading data
 load_data <- function() {
   url <- "https://raw.githubusercontent.com/rasools/GDP_PPP/main/data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204.csv"
@@ -41,7 +40,6 @@ ui <- page_sidebar(
   
   plotOutput("world_heatmap"),
   plotOutput("line_plot")
-
 )
 
 server <- function(input, output) {
@@ -68,11 +66,9 @@ server <- function(input, output) {
       theme_minimal()
   })
   
-    
   # Read the jeojson file for the world map
-  
   world <- reactive({
-    read_sf("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
+    read_sf("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json#")
   })
   
   # Filter the data

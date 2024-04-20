@@ -1,0 +1,122 @@
+---
+title: ""
+filters:
+  - shinylive
+---
+
+```{shinylive-r}
+#| standalone: true
+#| viewerHeight: 600
+
+library(shiny)
+library(bslib)
+library(tidyverse)
+library(ggplot2)
+library(plotly)
+library(geojsonsf)
+library(countrycode)
+library(ggiraph)
+
+# function for loading data
+load_data <- function() {
+  url <- "https://raw.githubusercontent.com/rasools/GDP_PPP/main/data/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204/API_NY.GDP.PCAP.PP.CD_DS2_en_csv_v2_204.csv"
+  read.csv(url, sep = ";", header = TRUE, skip = 4) %>%
+    rename_with(~ gsub("X", "", .x)) %>%
+    select(-c(3:44, 68)) %>%
+    drop_na() %>%
+    pivot_longer(cols = -c(1:2), names_to = "Year", values_to = "Value") %>%
+    mutate(Year = as.numeric(Year)) %>%
+    mutate(Value = ceiling(Value))
+}
+
+data <- load_data()
+
+# Define UI for app that draws a histogram ----
+ui <- page_sidebar(
+  # App title ----
+  title = "GDP PPP!",
+  # Sidebar panel for inputs ----
+  sidebar = sidebar(
+    sliderInput("year", "Years", min = min(data$Year), max = max(data$Year), value = c(min(data$Year), max(data$Year)), step=1),
+    selectInput("country", "Select Countries", choices = unique(data$Country.Name), selected = "Sweden", multiple = TRUE)
+  ),
+  # Main panel for displaying outputs ----
+  girafeOutput("world_heatmap"),
+  plotOutput("line_plot"),
+  tableOutput("table")
+
+)
+
+server <- function(input, output) {
+  
+  # Load data
+  data <- reactive(load_data())
+  
+  # Filter the data
+  filtered_data_lineplot <- reactive({
+    req(input$country, input$year)
+    data() %>%
+      filter(`Country.Name` %in% input$country,
+             Year >= input$year[1],
+             Year <= input$year[2])
+  })
+  
+  # Create the line plot
+  output$line_plot <- renderPlot({
+    ggplot(filtered_data_lineplot(), aes(x = Year, y = Value, color = `Country.Name`)) +
+      geom_line(na.rm = TRUE) +
+      labs(title = "GDP PPP Over Time",
+           x = "Year",
+           y = "GDP PPP") +
+      theme_minimal()
+  })
+
+  iso_codes <- reactive({
+    countrycode::codelist[, c("un.name.en", "iso3c")]
+  })
+  
+  world_data <- reactive({
+    ggplot2::map_data('world') %>% fortify() 
+  })
+  
+  # Add ISO3 codes to the world data
+  world_data_with_iso3 <- reactive({
+    world_data() %>%
+      left_join(iso_codes(), by = c("region" = "un.name.en"))
+  })
+  
+  # make input table based on the selected countries
+  output$table <- renderTable({
+    req(input$country)
+    world_data_with_iso3()[world_data_with_iso3()$region %in% input$country, c("region", "iso3c")]
+  })
+      
+  # Filter the data
+  filtered_data_world <- reactive({
+    req(input$year)
+    data() %>%
+      filter(Year == input$year[2])
+  })
+    
+  # Merge the world data with the filtered data
+  hm_df <- reactive({
+    world_data_with_iso3() %>%
+    left_join(filtered_data_world(), by = c("iso3c" = "Country.Code")) %>%
+    drop_na()
+  })
+  
+  # Create the world heatmap
+  output$world_heatmap <- renderGirafe({
+    req(input$year)
+    ggplot() + 
+    geom_polygon_interactive(data = hm_df(), color = 'gray70', size = 0.1,
+      aes(x = long, y = lat, fill = Value, group = group, 
+      tooltip = sprintf("%s<br/>%s", iso3c, Value))) +
+      scale_fill_gradientn(colours = brewer.pal(5, "RdBu"), na.value = 'white')
+  })
+  
+}
+# Run the application
+shinyApp(ui = ui, server = server)
+
+```
