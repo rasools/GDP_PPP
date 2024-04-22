@@ -83,8 +83,9 @@ ui &lt;- page_sidebar(
     selectInput("country", "Select Countries", choices = unique(data$Country.Name), selected = "Sweden", multiple = TRUE)
   ),
   
-  plotOutput("world_heatmap"),
-  plotOutput("line_plot")
+  plotOutput("line_plot"),
+  plotOutput("world_heatmap")
+
 )
 
 server &lt;- function(input, output) {
