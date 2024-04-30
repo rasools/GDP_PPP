@@ -1,12 +1,22 @@
 ---
-title: ""
+title: "GDP PPP for different countries over time!"
 filters:
   - shinylive
 ---
+<!-- Empty line --> <br>
+GDP (PPP) means gross domestic product based on purchasing power parity. Here you can further read about [GDP PPP](https://en.wikipedia.org/wiki/List_of_countries_by_GDP_(PPP)).
+```{r, echo=FALSE}
+shiny::tags$div(
+  style = "border: 2px solid black; padding: 10px;", 
+  shiny::tags$iframe(style="height:400px; width:100%;", src="https://en.wikipedia.org/wiki/List_of_countries_by_GDP_(PPP)")
+)
+```
 
+<!-- Empty line --> <br>
+Here you can see the GDP PPP for different countries over time. You can select the countries and the years you want to see the data for. The data is from the World Bank.
 ```{shinylive-r}
 #| standalone: true
-#| viewerHeight: 600
+#| viewerHeight: 400
 library(shiny)
 library(bslib)
 library(tidyverse)
@@ -31,7 +41,7 @@ data <- load_data()
 # Define UI for app that draws a histogram ----
 ui <- page_sidebar(
   # App title ----
-  title = "GDP PPP!",
+  title = "GDP PPP for different countries over time",
   # Sidebar panel for inputs ----
   sidebar = sidebar(
     sliderInput("year", "Years", min = min(data$Year), max = max(data$Year), value = c(min(data$Year), max(data$Year)), step=1),
@@ -39,7 +49,7 @@ ui <- page_sidebar(
   ),
   
   plotOutput("line_plot"),
-  plotOutput("world_heatmap")
+  # plotOutput("world_heatmap")
 
 )
 
@@ -85,15 +95,15 @@ server <- function(input, output) {
   })
   
   # Create the world heatmap
-  output$world_heatmap <- renderPlot({
-    ggplot(hm_df(), aes(fill = Value)) +
-      geom_sf() +
-      scale_fill_viridis_c() +
-      labs(title = paste("GDP PPP in", input$year[2]),
-           x = "Longitude",
-           y = "Latitude") +
-      theme_minimal()
-  })
+  # output$world_heatmap <- renderPlot({
+  #   ggplot(hm_df(), aes(fill = Value)) +
+  #     geom_sf() +
+  #     scale_fill_viridis_c() +
+  #     labs(title = paste("GDP PPP in", input$year[2]),
+  #          x = "Longitude",
+  #          y = "Latitude") +
+  #     theme_minimal()
+  # })
   
 }
 # Run the application

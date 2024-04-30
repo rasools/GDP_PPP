@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>gdp_ppp</title>
+<title>GDP PPP for different countries over time!</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -48,10 +48,36 @@ ul.task-list li input[type="checkbox"] {
 
 <main class="content" id="quarto-document-content">
 
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">GDP PPP for different countries over time!</h1>
+</div>
 
 
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<!-- Empty line -->
+<p><br> GDP (PPP) means gross domestic product based on purchasing power parity. Here you can further read about <a href="https://en.wikipedia.org/wiki/List_of_countries_by_GDP_(PPP)">GDP PPP</a>.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div style="border: 2px solid black; padding: 10px;">
+<iframe style="height:400px; width:100%;" src="https://en.wikipedia.org/wiki/List_of_countries_by_GDP_(PPP)"></iframe>
+</div>
+</div>
+</div>
+<!-- Empty line -->
+<p><br> Here you can see the GDP PPP for different countries over time. You can select the countries and the years you want to see the data for. The data is from the World Bank.</p>
 <pre class="shinylive-r" data-engine="r"><code>#| standalone: true
-#| viewerHeight: 600
+#| viewerHeight: 400
 library(shiny)
 library(bslib)
 library(tidyverse)
@@ -76,7 +102,7 @@ data &lt;- load_data()
 # Define UI for app that draws a histogram ----
 ui &lt;- page_sidebar(
   # App title ----
-  title = "GDP PPP!",
+  title = "GDP PPP for different countries over time",
   # Sidebar panel for inputs ----
   sidebar = sidebar(
     sliderInput("year", "Years", min = min(data$Year), max = max(data$Year), value = c(min(data$Year), max(data$Year)), step=1),
@@ -84,7 +110,7 @@ ui &lt;- page_sidebar(
   ),
   
   plotOutput("line_plot"),
-  plotOutput("world_heatmap")
+  # plotOutput("world_heatmap")
 
 )
 
@@ -130,15 +156,15 @@ server &lt;- function(input, output) {
   })
   
   # Create the world heatmap
-  output$world_heatmap &lt;- renderPlot({
-    ggplot(hm_df(), aes(fill = Value)) +
-      geom_sf() +
-      scale_fill_viridis_c() +
-      labs(title = paste("GDP PPP in", input$year[2]),
-           x = "Longitude",
-           y = "Latitude") +
-      theme_minimal()
-  })
+  # output$world_heatmap &lt;- renderPlot({
+  #   ggplot(hm_df(), aes(fill = Value)) +
+  #     geom_sf() +
+  #     scale_fill_viridis_c() +
+  #     labs(title = paste("GDP PPP in", input$year[2]),
+  #          x = "Longitude",
+  #          y = "Latitude") +
+  #     theme_minimal()
+  # })
   
 }
 # Run the application
