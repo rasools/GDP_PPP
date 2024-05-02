@@ -3,4 +3,5 @@ GDP (PPP) means gross domestic product based on purchasing power parity. Here yo
 
 https://rasools.github.io/GDP_PPP/
 
-![alt text]([http://url/to/img.png](https://github.com/rasools/GDP_PPP/blob/main/app.png))
+![](https://github.com/rasools/GDP_PPP/blob/main/app.png)
+![](preview.png)
